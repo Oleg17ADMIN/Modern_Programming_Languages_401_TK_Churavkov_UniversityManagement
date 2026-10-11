@@ -12,7 +12,7 @@ Console.WriteLine(".NET: 10\n");
 
 // 1. Створення об'єктів
 var course = new Course("Сучасні мови програмування");
-var student = new Student("Іван Іваненко");
+var student = new Student();
 var assignment = new Assignment("Лабораторна 1", 100);
 
 // 2. Взаємодія об'єктів (Інкапсуляція та поведінка)
