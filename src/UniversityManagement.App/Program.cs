@@ -1,6 +1,10 @@
-﻿using UniversityManagement.Domain;
+﻿using System.Text;
+using UniversityManagement.Domain;
+using UniversityManagement.Domain.Interfaces;
 
-// Залишаємо вивід з першої лабораторної
+// Встановлюємо підтримку української мови в консолі
+Console.OutputEncoding = Encoding.UTF8;
+
 Console.WriteLine("Modern Programming Course");
 Console.WriteLine("Student: Чураков Олег Вячеславович");
 Console.WriteLine("Group: 401 ТК");
@@ -9,23 +13,18 @@ Console.WriteLine("Domain: University Management");
 Console.WriteLine(".NET: 10\n");
 
 // --- Демонстрація ООП (Лабораторна 2) ---
-
-// 1. Створення об'єктів
 var course = new Course("Сучасні мови програмування");
 var student = new Student();
 var assignment = new Assignment("Лабораторна 1", 100);
 
-// 2. Взаємодія об'єктів (Інкапсуляція та поведінка)
 course.AddAssignment(assignment);
 course.EnrollStudent(student);
 Console.WriteLine($"Студент {student.Name} успішно записаний на курс '{course.Name}'.");
 
-// 3. Зміна стану через методи
 var enrollment = course.Enrollments.First();
 enrollment.AssignGrade(85);
 enrollment.Complete();
 
-// 4. Демонстрація поліморфізму (виклик через interface)
 IGradingStrategy percentageStrategy = new PercentageGradingStrategy();
 IGradingStrategy passFailStrategy = new PassFailGradingStrategy();
 
