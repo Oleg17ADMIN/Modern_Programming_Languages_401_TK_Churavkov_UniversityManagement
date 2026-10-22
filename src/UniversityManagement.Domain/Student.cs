@@ -1,19 +1,19 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace UniversityManagement.Domain;
 
 public class Student
 {
     public Guid Id { get; } = Guid.NewGuid();
-    public string Name { get; set; }
 
-    // Конструктор без параметрів, який встановлює ім'я за замовчуванням
+    public required string Name { get; init; }
+    public required string Email { get; init; }
+    public string? MiddleName { get; init; }
+
+    [SetsRequiredMembers]
     public Student()
     {
         Name = "Іван Іванов";
-    }
-
-    // Залишаємо старий конструктор для гнучкості
-    public Student(string name)
-    {
-        Name = name;
+        Email = "ivanov@university.edu.ua";
     }
 }

@@ -2,31 +2,39 @@
 using UniversityManagement.Domain;
 using UniversityManagement.Domain.Interfaces;
 
-// Встановлюємо підтримку української мови в консолі
+// Встановлюємо правильне кодування для української мови
 Console.OutputEncoding = Encoding.UTF8;
 
-Console.WriteLine("Modern Programming Course");
+Console.WriteLine("Modern Programming Course - Lab 3");
 Console.WriteLine("Student: Чураков Олег Вячеславович");
 Console.WriteLine("Group: 401 ТК");
 Console.WriteLine("Variant: 3");
-Console.WriteLine("Domain: University Management");
 Console.WriteLine(".NET: 10\n");
 
-// --- Демонстрація ООП (Лабораторна 2) ---
-var course = new Course("Сучасні мови програмування");
-var student = new Student();
-var assignment = new Assignment("Лабораторна 1", 100);
+// Демонстрація Lab 3: Створення Value Object (Record)
+var courseCode = new CourseCode("CS", 401);
+var course = new Course("Сучасні мови програмування", courseCode);
+
+// Використання object initializer завдяки required та init
+var student = new Student
+{
+    Name = "Олег Чураков",
+    Email = "oleg@university.edu.ua",
+    MiddleName = null // Nullable type
+};
+
+var assignment = new Assignment("Лабораторна 3", 100);
 
 course.AddAssignment(assignment);
 course.EnrollStudent(student);
-Console.WriteLine($"Студент {student.Name} успішно записаний на курс '{course.Name}'.");
 
 var enrollment = course.Enrollments.First();
+Console.WriteLine($"Статус до оцінювання: {enrollment.GetEnrollmentStatusDescription()}");
+
 enrollment.AssignGrade(85);
 enrollment.Complete();
 
-IGradingStrategy percentageStrategy = new PercentageGradingStrategy();
-IGradingStrategy passFailStrategy = new PassFailGradingStrategy();
-
-Console.WriteLine($"\nОцінка студента ({percentageStrategy.GetType().Name}): {percentageStrategy.GetGrade(enrollment.Grade)}");
-Console.WriteLine($"Оцінка студента ({passFailStrategy.GetType().Name}): {passFailStrategy.GetGrade(enrollment.Grade)}");
+Console.WriteLine($"\nСтудент: {student.Name} ({student.Email})");
+Console.WriteLine($"Курс: {course.Name} [{course.Code.Department}-{course.Code.Number}]");
+Console.WriteLine($"Статус після завершення: {enrollment.GetEnrollmentStatusDescription()}");
+Console.WriteLine($"Категорія оцінки: {enrollment.GetGradeCategory()}");
