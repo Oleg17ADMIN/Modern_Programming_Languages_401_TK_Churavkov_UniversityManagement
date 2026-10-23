@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace UniversityManagement.Domain;
 
 public class Student
@@ -9,11 +7,4 @@ public class Student
     public required string Name { get; init; }
     public required string Email { get; init; }
     public string? MiddleName { get; init; }
-
-    [SetsRequiredMembers]
-    public Student()
-    {
-        Name = "Іван Іванов";
-        Email = "ivanov@university.edu.ua";
-    }
 }

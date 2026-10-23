@@ -45,12 +45,12 @@ public class Enrollment
     };
 
     // Pattern matching 2: Relational patterns для категорії оцінки
-    public string GetGradeCategory() => Grade switch
-    {
-        >= 90 and <= 100 => "Excellent",
-        >= 74 and <= 89 => "Good",
-        >= 60 and <= 73 => "Satisfactory",
-        >= 0 and <= 59 => "Unsatisfactory",
-        _ => throw new ArgumentOutOfRangeException(nameof(Grade), "Некоректна оцінка")
-    };
+public string GetGradeCategory() => Grade switch
+{
+    >= 90 and <= 100 => "Excellent",
+    >= 74 and < 90 => "Good",
+    >= 60 and < 74 => "Satisfactory",
+    >= 0 and < 60 => "Unsatisfactory",
+    _ => throw new ArgumentOutOfRangeException(nameof(Grade), "Некоректна оцінка")
+};
 }

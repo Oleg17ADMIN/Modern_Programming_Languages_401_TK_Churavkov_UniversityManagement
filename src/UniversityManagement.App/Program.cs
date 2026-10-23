@@ -15,7 +15,7 @@ Console.WriteLine(".NET: 10\n");
 var courseCode = new CourseCode("CS", 401);
 var course = new Course("Сучасні мови програмування", courseCode);
 
-// Використання object initializer завдяки required та init
+// Використання object initia lizer завдяки required та init
 var student = new Student
 {
     Name = "Олег Чураков",
@@ -38,3 +38,10 @@ Console.WriteLine($"\nСтудент: {student.Name} ({student.Email})");
 Console.WriteLine($"Курс: {course.Name} [{course.Code.Department}-{course.Code.Number}]");
 Console.WriteLine($"Статус після завершення: {enrollment.GetEnrollmentStatusDescription()}");
 Console.WriteLine($"Категорія оцінки: {enrollment.GetGradeCategory()}");
+
+// Демонстрація патерну Стратегія
+IGradingStrategy percent = new PercentageGradingStrategy();
+IGradingStrategy passFail = new PassFailGradingStrategy();
+
+Console.WriteLine($"Оцінка (відсотки): {percent.GetGrade(enrollment.Grade)}");
+Console.WriteLine($"Оцінка (залік):    {passFail.GetGrade(enrollment.Grade)}");
