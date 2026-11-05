@@ -1,4 +1,4 @@
-namespace UniversityManagement.Domain;
+п»їnamespace UniversityManagement.Domain;
 
 public class Enrollment
 {
@@ -12,45 +12,53 @@ public class Enrollment
         Student = student;
     }
 
-    public void AssignGrade(double grade)
+    // bonusPolicy: Func<double, double>, РїРѕР»С–С‚РёРєР° Р±РѕРЅСѓСЃСѓ (Р·Р° Р·Р°РјРѕРІС‡СѓРІР°РЅРЅСЏРј Р±РµР· Р±РѕРЅСѓСЃСѓ)
+    // log: Action<string>, РЅРµРѕР±РѕРІ'СЏР·РєРѕРІРёР№ Р»РѕРіРµСЂ
+    public void AssignGrade(double rawScore, Func<double, double>? bonusPolicy = null, Action<string>? log = null)
     {
         if (IsCompleted || Status == EnrollmentStatus.Cancelled)
-            throw new InvalidOperationException("Неможливо змінити оцінку для неактивного курсу.");
+            throw new InvalidOperationException("РќРµРјРѕР¶Р»РёРІРѕ Р·РјС–РЅРёС‚Рё РѕС†С–РЅРєСѓ РґР»СЏ РЅРµР°РєС‚РёРІРЅРѕРіРѕ РєСѓСЂСЃСѓ.");
 
-        if (grade < 0 || grade > 100)
-            throw new ArgumentException("Оцінка має бути від 0 до 100.");
+        if (rawScore < 0 || rawScore > 100)
+            throw new ArgumentException("РћС†С–РЅРєР° РјР°С” Р±СѓС‚Рё РІС–Рґ 0 РґРѕ 100.");
 
-        Grade = grade;
+        var policy = bonusPolicy ?? GradeBonusPolicies.NoBonus;
+        var finalGrade = Math.Clamp(policy(rawScore), 0, 100);   // РїС–РґСЃСѓРјРѕРє РЅРµ РјРѕР¶Рµ РїРµСЂРµРІРёС‰РёС‚Рё 100
+
+        Grade = finalGrade;
+        log?.Invoke($"РћС†С–РЅРєР° РґР»СЏ {Student.Name}: РІС…С–РґРЅРёР№ Р±Р°Р» {rawScore:F1}, РїС–РґСЃСѓРјРєРѕРІР° {finalGrade:F1}");
     }
 
-    public void Complete()
+    public void Complete(Action<string>? log = null)
     {
         IsCompleted = true;
         Status = Grade >= 60 ? EnrollmentStatus.Completed : EnrollmentStatus.Failed;
+        log?.Invoke($"Р—Р°РїРёСЃ СЃС‚СѓРґРµРЅС‚Р° {Student.Name} Р·Р°РІРµСЂС€РµРЅРѕ, СЃС‚Р°С‚СѓСЃ: {Status}");
     }
 
-    public void Cancel()
+    public void Cancel(Action<string>? log = null)
     {
         Status = EnrollmentStatus.Cancelled;
+        log?.Invoke($"Р—Р°РїРёСЃ СЃС‚СѓРґРµРЅС‚Р° {Student.Name} СЃРєР°СЃРѕРІР°РЅРѕ");
     }
 
-    // Pattern matching 1: switch expression для опису статусу
+    // Pattern matching 1: switch expression РґР»СЏ РѕРїРёСЃСѓ СЃС‚Р°С‚СѓСЃСѓ
     public string GetEnrollmentStatusDescription() => Status switch
     {
-        EnrollmentStatus.Active => "Активний запис",
-        EnrollmentStatus.Completed => "Успішно завершено",
-        EnrollmentStatus.Failed => "Курс не складено",
-        EnrollmentStatus.Cancelled => "Запис скасовано",
-        _ => "Невідомий статус"
+        EnrollmentStatus.Active => "РђРєС‚РёРІРЅРёР№ Р·Р°РїРёСЃ",
+        EnrollmentStatus.Completed => "РЈСЃРїС–С€РЅРѕ Р·Р°РІРµСЂС€РµРЅРѕ",
+        EnrollmentStatus.Failed => "РљСѓСЂСЃ РЅРµ СЃРєР»Р°РґРµРЅРѕ",
+        EnrollmentStatus.Cancelled => "Р—Р°РїРёСЃ СЃРєР°СЃРѕРІР°РЅРѕ",
+        _ => "РќРµРІС–РґРѕРјРёР№ СЃС‚Р°С‚СѓСЃ"
     };
 
-    // Pattern matching 2: Relational patterns для категорії оцінки
-public string GetGradeCategory() => Grade switch
-{
-    >= 90 and <= 100 => "Excellent",
-    >= 74 and < 90 => "Good",
-    >= 60 and < 74 => "Satisfactory",
-    >= 0 and < 60 => "Unsatisfactory",
-    _ => throw new ArgumentOutOfRangeException(nameof(Grade), "Некоректна оцінка")
-};
+    // Pattern matching 2: Relational patterns РґР»СЏ РєР°С‚РµРіРѕСЂС–С— РѕС†С–РЅРєРё
+    public string GetGradeCategory() => Grade switch
+    {
+        >= 90 and <= 100 => "Excellent",
+        >= 74 and < 90   => "Good",
+        >= 60 and < 74   => "Satisfactory",
+        >= 0  and < 60   => "Unsatisfactory",
+        _ => throw new ArgumentOutOfRangeException(nameof(Grade), "РќРµРєРѕСЂРµРєС‚РЅР° РѕС†С–РЅРєР°")
+    };
 }
