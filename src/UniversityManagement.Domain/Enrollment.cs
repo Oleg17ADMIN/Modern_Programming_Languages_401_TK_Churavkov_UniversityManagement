@@ -7,6 +7,9 @@ public class Enrollment
     public bool IsCompleted { get; private set; }
     public EnrollmentStatus Status { get; private set; } = EnrollmentStatus.Active;
 
+    // Publisher: подія виникає після того, як оцінку виставлено
+    public event EventHandler<GradeAssignedEventArgs>? GradeAssigned;
+
     public Enrollment(Student student)
     {
         Student = student;
@@ -27,7 +30,12 @@ public class Enrollment
 
         Grade = finalGrade;
         log?.Invoke($"Оцінка для {Student.Name}: вхідний бал {rawScore:F1}, підсумкова {finalGrade:F1}");
+
+        OnGradeAssigned(new GradeAssignedEventArgs(this, rawScore, finalGrade));
     }
+
+    // ?. означає: якщо підписників немає, нічого не відбувається
+    private void OnGradeAssigned(GradeAssignedEventArgs e) => GradeAssigned?.Invoke(this, e);
 
     public void Complete(Action<string>? log = null)
     {
