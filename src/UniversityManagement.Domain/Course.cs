@@ -1,9 +1,9 @@
-namespace UniversityManagement.Domain;
+п»їnamespace UniversityManagement.Domain;
 
 public class Course
 {
     public string Name { get; }
-    public CourseCode Code { get; } // Нова властивість
+    public CourseCode Code { get; }
 
     private readonly List<Enrollment> _enrollments = new();
     public IReadOnlyCollection<Enrollment> Enrollments => _enrollments;
@@ -11,19 +11,20 @@ public class Course
     private readonly List<Assignment> _assignments = new();
     public IReadOnlyCollection<Assignment> Assignments => _assignments;
 
-    // Оновлений конструктор
     public Course(string name, CourseCode code)
     {
         Name = name;
         Code = code;
     }
 
-    public void EnrollStudent(Student student)
+    // log: Action<string>, РЅРµРѕР±РѕРІ'СЏР·РєРѕРІРёР№ Р»РѕРіРµСЂ, СЏРєРёР№ РїРµСЂРµРґР°С” РІРёРєР»РёРєР°С‡
+    public void EnrollStudent(Student student, Action<string>? log = null)
     {
         if (_enrollments.Any(e => e.Student.Id == student.Id))
-            throw new InvalidOperationException("Студент вже записаний на цей курс.");
+            throw new InvalidOperationException("РЎС‚СѓРґРµРЅС‚ РІР¶Рµ Р·Р°РїРёСЃР°РЅРёР№ РЅР° С†РµР№ РєСѓСЂСЃ.");
 
         _enrollments.Add(new Enrollment(student));
+        log?.Invoke($"РЎС‚СѓРґРµРЅС‚Р° {student.Name} Р·Р°РїРёСЃР°РЅРѕ РЅР° РєСѓСЂСЃ В«{Name}В»");
     }
 
     public void RemoveStudent(Student student)
