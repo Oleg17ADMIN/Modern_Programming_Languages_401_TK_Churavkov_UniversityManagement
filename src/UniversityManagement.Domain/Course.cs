@@ -11,6 +11,9 @@ public class Course
     private readonly List<Assignment> _assignments = new();
     public IReadOnlyCollection<Assignment> Assignments => _assignments;
 
+    // Код правила предметної області, який потрапляє у DomainRuleViolationException.Rule
+    public const string DuplicateEnrollmentRule = "DuplicateEnrollment";
+
     public Course(string name, CourseCode code)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);   // назва курсу обов'язкова
@@ -25,7 +28,9 @@ public class Course
         ArgumentNullException.ThrowIfNull(student);   // 1) перевірка аргументу
 
         if (_enrollments.Any(e => e.Student.Id == student.Id))   // 2) перевірка стану курсу
-            throw new InvalidOperationException("Студент вже записаний на цей курс.");
+            throw new DomainRuleViolationException(
+                DuplicateEnrollmentRule,
+                $"Студента {student.Name} уже записано на курс «{Name}»: повторне зарахування заборонене.");
 
         _enrollments.Add(new Enrollment(student));
         log?.Invoke($"Студента {student.Name} записано на курс «{Name}»");
