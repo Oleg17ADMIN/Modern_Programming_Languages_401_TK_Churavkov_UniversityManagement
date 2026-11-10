@@ -4,6 +4,7 @@ public class Enrollment
 {
     public Student Student { get; }
     public double Grade { get; private set; }
+    public bool HasGrade { get; private set; }   // чи виставлено оцінку (потрібно, щоб не завершити запис без оцінки)
     public bool IsCompleted { get; private set; }
     public EnrollmentStatus Status { get; private set; } = EnrollmentStatus.Active;
 
@@ -25,14 +26,17 @@ public class Enrollment
         if (double.IsNaN(rawScore) || rawScore < 0 || rawScore > 100)
             throw new ArgumentOutOfRangeException(nameof(rawScore), rawScore, "Оцінка має бути від 0 до 100.");
 
-        // 2) Перевірка стану об'єкта (поки без змін)
-        if (IsCompleted || Status == EnrollmentStatus.Cancelled)
-            throw new InvalidOperationException("Неможливо змінити оцінку для неактивного курсу.");
+        // 2) Перевірка стану: оцінку можна змінювати лише в активному записі
+        if (Status != EnrollmentStatus.Active)
+            throw new InvalidOperationException(
+                $"Оцінку не можна змінити: запис має статус {Status}.");
 
         var policy = bonusPolicy ?? GradeBonusPolicies.NoBonus;
         var finalGrade = Math.Clamp(policy(rawScore), 0, 100);   // підсумок не може перевищити 100
 
-        Grade = finalGrade;   // стан змінюємо лише після всіх перевірок
+        // Усі перевірки пройдено: тепер змінюємо стан
+        Grade = finalGrade;
+        HasGrade = true;
         log?.Invoke($"Оцінка для {Student.Name}: вхідний бал {rawScore:F1}, підсумкова {finalGrade:F1}");
 
         OnGradeAssigned(new GradeAssignedEventArgs(this, rawScore, finalGrade));   // подія лише після успіху
@@ -43,6 +47,13 @@ public class Enrollment
 
     public void Complete(Action<string>? log = null)
     {
+        if (Status != EnrollmentStatus.Active)
+            throw new InvalidOperationException(
+                $"Запис уже має статус {Status}: завершити його повторно неможливо.");
+
+        if (!HasGrade)
+            throw new InvalidOperationException("Не можна завершити запис, поки не виставлено оцінку.");
+
         IsCompleted = true;
         Status = Grade >= 60 ? EnrollmentStatus.Completed : EnrollmentStatus.Failed;
         log?.Invoke($"Запис студента {Student.Name} завершено, статус: {Status}");
@@ -50,6 +61,10 @@ public class Enrollment
 
     public void Cancel(Action<string>? log = null)
     {
+        if (Status != EnrollmentStatus.Active)
+            throw new InvalidOperationException(
+                $"Запис зі статусом {Status} скасувати неможливо.");
+
         Status = EnrollmentStatus.Cancelled;
         log?.Invoke($"Запис студента {Student.Name} скасовано");
     }
