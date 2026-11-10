@@ -1,4 +1,4 @@
-﻿namespace UniversityManagement.Domain;
+namespace UniversityManagement.Domain;
 
 public class Enrollment
 {
@@ -12,6 +12,7 @@ public class Enrollment
 
     public Enrollment(Student student)
     {
+        ArgumentNullException.ThrowIfNull(student);
         Student = student;
     }
 
@@ -19,19 +20,22 @@ public class Enrollment
     // log: Action<string>, необов'язковий логер
     public void AssignGrade(double rawScore, Func<double, double>? bonusPolicy = null, Action<string>? log = null)
     {
+        // 1) Перевірка аргументу. double.IsNaN потрібен, бо NaN не менший і не більший за будь-яке число,
+        //    тому звичайні порівняння його пропустили б (а double.TryParse("NaN") це число розпізнає).
+        if (double.IsNaN(rawScore) || rawScore < 0 || rawScore > 100)
+            throw new ArgumentOutOfRangeException(nameof(rawScore), rawScore, "Оцінка має бути від 0 до 100.");
+
+        // 2) Перевірка стану об'єкта (поки без змін)
         if (IsCompleted || Status == EnrollmentStatus.Cancelled)
             throw new InvalidOperationException("Неможливо змінити оцінку для неактивного курсу.");
-
-        if (rawScore < 0 || rawScore > 100)
-            throw new ArgumentException("Оцінка має бути від 0 до 100.");
 
         var policy = bonusPolicy ?? GradeBonusPolicies.NoBonus;
         var finalGrade = Math.Clamp(policy(rawScore), 0, 100);   // підсумок не може перевищити 100
 
-        Grade = finalGrade;
+        Grade = finalGrade;   // стан змінюємо лише після всіх перевірок
         log?.Invoke($"Оцінка для {Student.Name}: вхідний бал {rawScore:F1}, підсумкова {finalGrade:F1}");
 
-        OnGradeAssigned(new GradeAssignedEventArgs(this, rawScore, finalGrade));
+        OnGradeAssigned(new GradeAssignedEventArgs(this, rawScore, finalGrade));   // подія лише після успіху
     }
 
     // ?. означає: якщо підписників немає, нічого не відбувається
