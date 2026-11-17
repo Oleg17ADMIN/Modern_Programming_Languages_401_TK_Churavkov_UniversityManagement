@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using UniversityManagement.Domain;
 using UniversityManagement.Domain.Reports;
 
@@ -12,8 +13,19 @@ var students = new InMemoryRepository<Student>();
 var courses = new InMemoryRepository<Course>();
 TestDataSeeder.Seed(students, courses);
 
-string filePath = Path.Combine(AppContext.BaseDirectory, "data", "report.json");
-var storage = new EnrollmentReportStorage(filePath);
+var config = new ConfigurationBuilder()
+    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: false)
+    .Build();
+
+string relativePath = config["Storage:FilePath"]
+    ?? throw new InvalidOperationException("Storage:FilePath is not configured.");
+string filePath = Path.Combine(AppContext.BaseDirectory, relativePath);
+
+bool writeIndented = true;
+if (bool.TryParse(config["Storage:WriteIndented"], out var parsed))
+    writeIndented = parsed;
+
+var storage = new EnrollmentReportStorage(filePath, writeIndented);
 
 Console.WriteLine("1. Формування звіту");
 var report = EnrollmentReportBuilder.Build(courses.GetAll());
