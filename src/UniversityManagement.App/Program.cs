@@ -1,12 +1,14 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using UniversityManagement.Domain;
+using UniversityManagement.Domain.External;
 using UniversityManagement.Domain.Reports;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-Console.WriteLine("Лабораторна робота №7: JSON, файли та конфігурація");
+Console.WriteLine("Лабораторні роботи №7 та №8: JSON, конфігурація, async та HTTP");
 Console.WriteLine("Student: Чураков Олег Вячеславович, група 401 ТК, варіант 3\n");
 
 var students = new InMemoryRepository<Student>();
@@ -70,6 +72,17 @@ Console.WriteLine("\n5. Пошкоджений JSON");
 string brokenPath = Path.Combine(dataDir, "broken.json");
 await File.WriteAllTextAsync(brokenPath, "[ { \"StudentName\": \"Іваненко\", ");
 await TryLoadAsync(new EnrollmentReportStorage(brokenPath));
+
+string baseUrl = config["ExternalApi:BaseUrl"]
+    ?? throw new InvalidOperationException("ExternalApi:BaseUrl is not configured.");
+
+using var http = new HttpClient { BaseAddress = new Uri(baseUrl) };
+var users = new ExternalUserClient(http);
+
+Console.WriteLine("\n6. Зовнішні контакти студентів (HTTP GET)");
+Console.WriteLine("Loading external contacts...");
+var first = await users.GetUserAsync(1, CancellationToken.None);
+Console.WriteLine($"{first?.Id} | {first?.Name} | {first?.Email}");
 
 Console.WriteLine("\nПрограма завершилась без аварійного завершення.");
 
