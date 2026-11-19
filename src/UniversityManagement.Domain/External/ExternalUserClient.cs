@@ -17,4 +17,28 @@ public class ExternalUserClient
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(id);
         return await _http.GetFromJsonAsync<ExternalUser>($"users/{id}", token);
     }
+
+    public async Task<List<ExternalUser>> GetUsersAsync(IEnumerable<int> ids, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var tasks = ids.Select(id => GetUserAsync(id, token)).ToList();
+        ExternalUser?[] users = await Task.WhenAll(tasks);
+
+        return users.OfType<ExternalUser>().ToList();
+    }
+
+    public async Task<List<ExternalUser>> GetUsersSequentiallyAsync(IEnumerable<int> ids, CancellationToken token)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var users = new List<ExternalUser>();
+        foreach (var id in ids)
+        {
+            var user = await GetUserAsync(id, token);
+            if (user is not null) users.Add(user);
+        }
+
+        return users;
+    }
 }

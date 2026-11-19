@@ -78,11 +78,31 @@ string baseUrl = config["ExternalApi:BaseUrl"]
 
 using var http = new HttpClient { BaseAddress = new Uri(baseUrl) };
 var users = new ExternalUserClient(http);
+int[] ids = { 1, 2, 3 };
 
-Console.WriteLine("\n6. Зовнішні контакти студентів (HTTP GET)");
+Console.WriteLine("\n6. Зовнішні контакти студентів (Task.WhenAll)");
 Console.WriteLine("Loading external contacts...");
-var first = await users.GetUserAsync(1, CancellationToken.None);
-Console.WriteLine($"{first?.Id} | {first?.Name} | {first?.Email}");
+var watch = Stopwatch.StartNew();
+var contacts = await users.GetUsersAsync(ids, CancellationToken.None);
+watch.Stop();
+
+Console.WriteLine($"Received: {contacts.Count} ({watch.ElapsedMilliseconds} мс)");
+foreach (var u in contacts)
+    Console.WriteLine($"{u.Id} | {u.Name} | {u.Email}");
+
+Console.WriteLine("\n7. Послідовно і одночасно (додаткове завдання)");
+await users.GetUserAsync(1, CancellationToken.None);
+
+watch.Restart();
+await users.GetUsersSequentiallyAsync(ids, CancellationToken.None);
+long sequential = watch.ElapsedMilliseconds;
+
+watch.Restart();
+await users.GetUsersAsync(ids, CancellationToken.None);
+long concurrent = watch.ElapsedMilliseconds;
+
+Console.WriteLine($"Три послідовні запити: {sequential} мс");
+Console.WriteLine($"Три запити через Task.WhenAll: {concurrent} мс");
 
 Console.WriteLine("\nПрограма завершилась без аварійного завершення.");
 
