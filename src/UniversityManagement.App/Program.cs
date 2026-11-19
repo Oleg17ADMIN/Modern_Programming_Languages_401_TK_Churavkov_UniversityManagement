@@ -1,12 +1,14 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using UniversityManagement.Domain;
+using UniversityManagement.Domain.External;
 using UniversityManagement.Domain.Reports;
 
 Console.OutputEncoding = Encoding.UTF8;
 
-Console.WriteLine("Лабораторна робота №7: JSON, файли та конфігурація");
+Console.WriteLine("Лабораторні роботи №7 та №8: JSON, конфігурація, async та HTTP");
 Console.WriteLine("Student: Чураков Олег Вячеславович, група 401 ТК, варіант 3\n");
 
 var students = new InMemoryRepository<Student>();
@@ -71,6 +73,64 @@ string brokenPath = Path.Combine(dataDir, "broken.json");
 await File.WriteAllTextAsync(brokenPath, "[ { \"StudentName\": \"Іваненко\", ");
 await TryLoadAsync(new EnrollmentReportStorage(brokenPath));
 
+string baseUrl = config["ExternalApi:BaseUrl"]
+    ?? throw new InvalidOperationException("ExternalApi:BaseUrl is not configured.");
+
+using var http = new HttpClient { BaseAddress = new Uri(baseUrl) };
+var users = new ExternalUserClient(http);
+int[] ids = { 1, 2, 3 };
+
+await RunHttpAsync("\n6. Зовнішні контакти студентів (Task.WhenAll)", async () =>
+{
+    using var cts = NewTimeout();
+    Console.WriteLine("Loading external contacts...");
+
+    var watch = Stopwatch.StartNew();
+    var contacts = await users.GetUsersAsync(ids, cts.Token);
+    watch.Stop();
+
+    Console.WriteLine($"Received: {contacts.Count} ({watch.ElapsedMilliseconds} мс)");
+    foreach (var u in contacts)
+        Console.WriteLine($"{u.Id} | {u.Name} | {u.Email}");
+});
+
+await RunHttpAsync("\n7. Послідовно і одночасно (додаткове завдання)", async () =>
+{
+    using var cts = NewTimeout();
+    await users.GetUserAsync(1, cts.Token);
+
+    var watch = Stopwatch.StartNew();
+    await users.GetUsersSequentiallyAsync(ids, cts.Token);
+    long sequential = watch.ElapsedMilliseconds;
+
+    watch.Restart();
+    await users.GetUsersAsync(ids, cts.Token);
+    long concurrent = watch.ElapsedMilliseconds;
+
+    Console.WriteLine($"Три послідовні запити: {sequential} мс");
+    Console.WriteLine($"Три запити через Task.WhenAll: {concurrent} мс");
+});
+
+await RunHttpAsync("\n8. Сервер відповів помилкою (користувача 9999 не існує)", async () =>
+{
+    using var cts = NewTimeout();
+    await users.GetUserAsync(9999, cts.Token);
+});
+
+await RunHttpAsync("\n9. Сервер недоступний", async () =>
+{
+    using var badHttp = new HttpClient { BaseAddress = new Uri("https://nonexistent.invalid/") };
+    using var cts = NewTimeout();
+    await new ExternalUserClient(badHttp).GetUserAsync(1, cts.Token);
+});
+
+await RunHttpAsync("\n10. Запит скасовано", async () =>
+{
+    using var cts = new CancellationTokenSource();
+    cts.Cancel();
+    await users.GetUserAsync(1, cts.Token);
+});
+
 Console.WriteLine("\nПрограма завершилась без аварійного завершення.");
 
 static async Task<List<EnrollmentReport>?> TryLoadAsync(EnrollmentReportStorage storage)
@@ -97,4 +157,27 @@ static async Task<List<EnrollmentReport>?> TryLoadAsync(EnrollmentReportStorage 
     }
 
     return null;
+}
+
+static CancellationTokenSource NewTimeout() => new(TimeSpan.FromSeconds(10));
+
+static async Task RunHttpAsync(string title, Func<Task> operation)
+{
+    Console.WriteLine(title);
+    try
+    {
+        await operation();
+    }
+    catch (OperationCanceledException)
+    {
+        Console.WriteLine("Запит скасовано або час очікування вичерпано.");
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.WriteLine($"Помилка HTTP: {ex.Message}");
+    }
+    catch (JsonException ex)
+    {
+        Console.WriteLine($"Помилка JSON: {ex.Message.Split('.')[0]}.");
+    }
 }
