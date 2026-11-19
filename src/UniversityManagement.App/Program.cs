@@ -80,29 +80,56 @@ using var http = new HttpClient { BaseAddress = new Uri(baseUrl) };
 var users = new ExternalUserClient(http);
 int[] ids = { 1, 2, 3 };
 
-Console.WriteLine("\n6. Зовнішні контакти студентів (Task.WhenAll)");
-Console.WriteLine("Loading external contacts...");
-var watch = Stopwatch.StartNew();
-var contacts = await users.GetUsersAsync(ids, CancellationToken.None);
-watch.Stop();
+await RunHttpAsync("\n6. Зовнішні контакти студентів (Task.WhenAll)", async () =>
+{
+    using var cts = NewTimeout();
+    Console.WriteLine("Loading external contacts...");
 
-Console.WriteLine($"Received: {contacts.Count} ({watch.ElapsedMilliseconds} мс)");
-foreach (var u in contacts)
-    Console.WriteLine($"{u.Id} | {u.Name} | {u.Email}");
+    var watch = Stopwatch.StartNew();
+    var contacts = await users.GetUsersAsync(ids, cts.Token);
+    watch.Stop();
 
-Console.WriteLine("\n7. Послідовно і одночасно (додаткове завдання)");
-await users.GetUserAsync(1, CancellationToken.None);
+    Console.WriteLine($"Received: {contacts.Count} ({watch.ElapsedMilliseconds} мс)");
+    foreach (var u in contacts)
+        Console.WriteLine($"{u.Id} | {u.Name} | {u.Email}");
+});
 
-watch.Restart();
-await users.GetUsersSequentiallyAsync(ids, CancellationToken.None);
-long sequential = watch.ElapsedMilliseconds;
+await RunHttpAsync("\n7. Послідовно і одночасно (додаткове завдання)", async () =>
+{
+    using var cts = NewTimeout();
+    await users.GetUserAsync(1, cts.Token);
 
-watch.Restart();
-await users.GetUsersAsync(ids, CancellationToken.None);
-long concurrent = watch.ElapsedMilliseconds;
+    var watch = Stopwatch.StartNew();
+    await users.GetUsersSequentiallyAsync(ids, cts.Token);
+    long sequential = watch.ElapsedMilliseconds;
 
-Console.WriteLine($"Три послідовні запити: {sequential} мс");
-Console.WriteLine($"Три запити через Task.WhenAll: {concurrent} мс");
+    watch.Restart();
+    await users.GetUsersAsync(ids, cts.Token);
+    long concurrent = watch.ElapsedMilliseconds;
+
+    Console.WriteLine($"Три послідовні запити: {sequential} мс");
+    Console.WriteLine($"Три запити через Task.WhenAll: {concurrent} мс");
+});
+
+await RunHttpAsync("\n8. Сервер відповів помилкою (користувача 9999 не існує)", async () =>
+{
+    using var cts = NewTimeout();
+    await users.GetUserAsync(9999, cts.Token);
+});
+
+await RunHttpAsync("\n9. Сервер недоступний", async () =>
+{
+    using var badHttp = new HttpClient { BaseAddress = new Uri("https://nonexistent.invalid/") };
+    using var cts = NewTimeout();
+    await new ExternalUserClient(badHttp).GetUserAsync(1, cts.Token);
+});
+
+await RunHttpAsync("\n10. Запит скасовано", async () =>
+{
+    using var cts = new CancellationTokenSource();
+    cts.Cancel();
+    await users.GetUserAsync(1, cts.Token);
+});
 
 Console.WriteLine("\nПрограма завершилась без аварійного завершення.");
 
@@ -130,4 +157,27 @@ static async Task<List<EnrollmentReport>?> TryLoadAsync(EnrollmentReportStorage 
     }
 
     return null;
+}
+
+static CancellationTokenSource NewTimeout() => new(TimeSpan.FromSeconds(10));
+
+static async Task RunHttpAsync(string title, Func<Task> operation)
+{
+    Console.WriteLine(title);
+    try
+    {
+        await operation();
+    }
+    catch (OperationCanceledException)
+    {
+        Console.WriteLine("Запит скасовано або час очікування вичерпано.");
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.WriteLine($"Помилка HTTP: {ex.Message}");
+    }
+    catch (JsonException ex)
+    {
+        Console.WriteLine($"Помилка JSON: {ex.Message.Split('.')[0]}.");
+    }
 }
