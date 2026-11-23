@@ -3,4 +3,7 @@
     <Project Path="src/UniversityManagement.App/UniversityManagement.App.csproj" />
     <Project Path="src/UniversityManagement.Domain/UniversityManagement.Domain.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UniversityManagement.Tests/UniversityManagement.Tests.csproj" />
+  </Folder>
 </Solution>
