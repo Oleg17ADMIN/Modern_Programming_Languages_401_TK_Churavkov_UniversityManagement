@@ -2,7 +2,10 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using UniversityManagement.Domain;
+using UniversityManagement.Domain.Application;
 using UniversityManagement.Domain.External;
 using UniversityManagement.Domain.Reports;
 
@@ -130,6 +133,45 @@ await RunHttpAsync("\n10. Запит скасовано", async () =>
     cts.Cancel();
     await users.GetUserAsync(1, cts.Token);
 });
+
+Console.WriteLine("\n11. Dependency Injection: успішне виставлення оцінки (ConsoleStudentNotifier)");
+
+var demoStudent = new Student { Name = "Іван Петренко", Email = "ivan@example.com" };
+var demoCourse = new Course("Алгоритми", new CourseCode("CS", 101));
+demoCourse.EnrollStudent(demoStudent);
+var demoEnrollment = demoCourse.Enrollments.First();
+
+var consoleBuilder = Host.CreateApplicationBuilder(args);
+consoleBuilder.Services.AddTransient<IStudentNotifier, ConsoleStudentNotifier>();
+consoleBuilder.Services.AddTransient<EnrollmentApplicationService>();
+using var consoleHost = consoleBuilder.Build();
+
+var gradeService = consoleHost.Services.GetRequiredService<EnrollmentApplicationService>();
+gradeService.AssignGrade(demoEnrollment, 85);
+
+Console.WriteLine("\n12. Оцінка поза діапазоном: Warning, оцінка не змінюється");
+try
+{
+    gradeService.AssignGrade(demoEnrollment, 150);
+}
+catch (ArgumentOutOfRangeException)
+{
+    Console.WriteLine($"Виняток отримано, оцінка лишилась {demoEnrollment.Grade}");
+}
+
+Console.WriteLine("\n13. Заміна реалізації на InMemoryStudentNotifier (код сервісу не змінювався)");
+var memoryNotifier = new InMemoryStudentNotifier();
+var memoryBuilder = Host.CreateApplicationBuilder(args);
+memoryBuilder.Services.AddSingleton<IStudentNotifier>(memoryNotifier);
+memoryBuilder.Services.AddTransient<EnrollmentApplicationService>();
+using var memoryHost = memoryBuilder.Build();
+
+var memoryService = memoryHost.Services.GetRequiredService<EnrollmentApplicationService>();
+memoryService.AssignGrade(demoEnrollment, 90);
+
+Console.WriteLine($"Повідомлень у пам'яті: {memoryNotifier.Messages.Count}");
+foreach (var message in memoryNotifier.Messages)
+    Console.WriteLine(message);
 
 Console.WriteLine("\nПрограма завершилась без аварійного завершення.");
 
